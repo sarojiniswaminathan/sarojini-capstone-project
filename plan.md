@@ -1,51 +1,51 @@
-Tailoring Business Agent — Project Plan
+## ## Tailoring Business Agent — Project Plan
 
 
-01. **Project Overview**
+## 01. **Project Overview**
 
-**Project Name:** Tailoring Business Agent; Project Type: AI Agent / Business Operations System **Domain:** Fashion Design, Custom Clothing, Small Business Operations Primary User: the business owner
+**Project Name:** Tailoring Business Agent; Project **Type:** AI Agent / Business Operations System **Domain:** Fashion Design, Custom Clothing, Small Business Operations Primary User: the business owner
 
 **Core Problem:** Managing a small custom clothing business involves keeping track of customer orders, deadlines, fabrics and other materials, production time, sourcing trips, alterations, college commitments, and customer communication. These pieces of information are interconnected, but are often managed separately.
 
 The Tailoring Business Agent is designed to bring these systems together. It acts as an intelligent production and business assistant that understands:
 
-## What orders exist
-## Which orders are urgent
-## What materials are available
-## Which materials are reserved
-## What needs to be sourced
-## What projects are currently being worked on
-## How much time each project requires
-## When college commitments make production unavailable
-## What needs to happen next
-## What materials could be used for future designs
-## What previous business owner projects can inform new recommendations
+What orders exist
+Which orders are urgent
+What materials are available
+Which materials are reserved
+What needs to be sourced
+What projects are currently being worked on
+How much time each project requires
+When college commitments make production unavailable
+What needs to happen next
+What materials could be used for future designs
+What previous business owner projects can inform new recommendations
 
 The agent then uses this information to plan and continuously update the business workflow.
 
 
-02. **Core Concept**
+## 02. **Core Concept**
 
 Turn the information surrounding the business owner into one interconnected system that can reason about orders, materials, and time, rather than treating each as a separate database.
 
 The system should answer questions such as:
 
-## What should I work on today?
-## Which order should I prioritise?
-## Do I have enough fabric for this order?
-## Which materials need to be purchased?
-## Can I combine these purchases into one sourcing trip?
-## When can I realistically complete this order around college?
-## What happens to my schedule if I don't finish today's work?
-## What do I currently have in my inventory?
-## What can I make from the fabric I currently own?
-## What have I made in the past using similar materials?
-## Can you make a catalogue of possible garments I can offer this customer?
+What should I work on today?
+Which order should I prioritise?
+Do I have enough fabric for this order?
+Which materials need to be purchased?
+Can I combine these purchases into one sourcing trip?
+When can I realistically complete this order around college?
+What happens to my schedule if I don't finish today's work?
+What do I currently have in my inventory?
+What can I make from the fabric I currently own?
+What have I made in the past using similar materials?
+Can you make a catalogue of possible garments I can offer this customer?
 
 The differentiator is not any single feature — it's that orders, materials, time, and history all sit in one connected model, so a question about "today's priorities" can pull from all four at once instead of requiring the business owner to check four separate tools and reconcile them manually.
 
 
-03. **Goals & Success Criteria**
+## 03. **Goals & Success Criteria**
 
 Primary goal: Reduce the mental overhead of running the business by letting the business owner ask natural questions and get answers grounded in her actual orders, stock, and calendar — instead of holding it all in her head or across spreadsheets/notes apps.
 
@@ -64,7 +64,7 @@ E-commerce storefront
 Automated customer messaging without the business owner's review
 
 
-04. **Scope: MVP vs Final Vision**
+## 04. **Scope: MVP vs Final Vision**
 
 MVP (Minimum Viable Product)
 
