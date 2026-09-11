@@ -3,7 +3,7 @@
 
 ## 01. **Project Overview**
 
-**Project Name:** Tailoring Business Agent; Project Type: AI Agent / Business Operations System **Domain:** Fashion Design, Custom Clothing, Small Business Operations Primary User: the business owner
+**Project Name:** Tailoring Business Agent; Project **Type:** AI Agent / Business Operations System **Domain:** Fashion Design, Custom Clothing, Small Business Operations Primary User: the business owner
 
 **Core Problem:** Managing a small custom clothing business involves keeping track of customer orders, deadlines, fabrics and other materials, production time, sourcing trips, alterations, college commitments, and customer communication. These pieces of information are interconnected, but are often managed separately.
 
