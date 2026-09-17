@@ -4,9 +4,11 @@ works correctly on its own. Run with: python -m agent.demo
 """
 
 import json
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 from agent.db import reset_db
 from agent import seed_data

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tailoring Business Agent</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 20px;
+        background: #f7f7f7;
+        color: #222;
+      }
+      .chat-box {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      }
+      #messages {
+        min-height: 300px;
+        max-height: 500px;
+        overflow-y: auto;
+        margin-bottom: 16px;
+        padding: 12px;
+        background: #fafafa;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+      .message {
+        margin: 10px 0;
+        padding: 10px 12px;
+        border-radius: 8px;
+      }
+      .user {
+        background: #dfeeff;
+        margin-left: 40px;
+      }
+      .assistant {
+        background: #eaf7ea;
+        margin-right: 40px;
+      }
+      form {
+        display: flex;
+        gap: 12px;
+      }
+      input {
+        flex: 1;
+        padding: 12px;
+        font-size: 16px;
+      }
+      button {
+        padding: 12px 18px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tailoring Business Agent</h1>
+    <div class="chat-box">
+      <div id="messages"></div>
+      <form id="chat-form">
+        <input id="message" type="text" placeholder="Ask about orders, fabric, or today's plan" autocomplete="off" />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

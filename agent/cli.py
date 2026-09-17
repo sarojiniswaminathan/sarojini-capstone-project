@@ -8,6 +8,11 @@ Usage:
 
 import os
 import sys
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 from .db import get_connection, init_db, reset_db, DEFAULT_DB_PATH
 
@@ -30,9 +35,9 @@ def main():
         else:
             init_db(conn)  # CREATE TABLE IF NOT EXISTS — safe no-op if already set up
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("ANTHROPIC_API_KEY is not set. The chat agent needs it to talk to Claude.")
-        print("Set it with:  export ANTHROPIC_API_KEY=sk-ant-...")
+    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("GEMINI_API_KEY")):
+        print("No AI API key is set. The chat agent needs either ANTHROPIC_API_KEY or GEMINI_API_KEY.")
+        print("Set it with: export ANTHROPIC_API_KEY=... or export GEMINI_API_KEY=...")
         print("(You can still test the deterministic core with: python -m agent.demo)")
         return
 
