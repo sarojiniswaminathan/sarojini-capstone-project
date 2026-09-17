@@ -1,1 +1,3 @@
 anthropic
+python-dotenv
+google-auth-oauthlib
