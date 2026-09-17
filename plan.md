@@ -45,7 +45,96 @@ Can you make a catalogue of possible garments I can offer this customer?
 The differentiator is not any single feature — it's that orders, materials, time, and history all sit in one connected model, so a question about "today's priorities" can pull from all four at once instead of requiring the business owner to check four separate tools and reconcile them manually.
 
 
-## 03. **Goals & Success Criteria**
+## **03. AI Agent Setup & Involvement**
+
+The Tailoring Business Agent will use AI as the reasoning and orchestration layer of the system. The purpose of the AI is not simply to provide a conversational interface, but to understand the business owner's requests, identify which information is needed, and decide which actions or system functions should be used to solve the request.
+
+For example, when the business owner asks:
+
+> "What should I work on today?"
+
+the agent should be able to:
+
+1. Check active orders and their deadlines.
+2. Check the current production stage of each project.
+3. Check estimated remaining work.
+4. Check material availability and reservations.
+5. Check the business owner's available time around college commitments.
+6. Identify conflicts or urgent work.
+7. Recommend what should be worked on and explain why.
+
+The business owner should be able to interact with the system naturally rather than having to manually navigate between separate sections.
+
+**AI Responsibilities**
+
+The AI will be responsible for:
+
+* Understanding natural language requests.
+* Identifying the user's intended task.
+* Selecting the appropriate agent skill or workflow.
+* Reasoning across orders, materials, projects and available time.
+* Prioritising work based on multiple factors.
+* Explaining why an order or task has been prioritised.
+* Identifying missing information required to complete a task.
+* Generating scheduling recommendations.
+* Using previous projects to inform future recommendations.
+* Suggesting possible garments based on available materials.
+* Generating customer-facing catalogue and proposal content.
+* Recommending next actions when problems or conflicts are detected.
+
+**Deterministic System Responsibilities**
+
+Important business data and calculations should not depend entirely on AI judgement. The underlying system will handle:
+
+* Inventory quantities and units.
+* Fractional material calculations.
+* Reserved versus available stock.
+* Material deductions and adjustments.
+* Order and project status.
+* Deadline and date calculations.
+* Calendar availability.
+* Recording completed work.
+* Recording actual material usage.
+* Maintaining the relationship between orders, projects and materials.
+
+This separation allows the agent to reason flexibly while keeping important business data predictable, traceable and reliable.
+
+**Initial Agent Skills**
+
+The initial setup will establish the core skills required for the MVP:
+
+* Order Management: create, update and retrieve orders.
+* Inventory Check: determine whether required materials are available.
+* Material Calculation: calculate shortages and required quantities.
+* Priority Reasoning: determine which order should be prioritised.
+* Production Planning: identify available time for production.
+* Daily Planning: answer "What should I work on today?"
+* Conflict Detection: identify when deadlines, materials or available time create a problem.
+
+Additional skills such as sourcing trip planning, historical project recommendations and customer catalogue generation will be developed after the core agent workflow is working.
+
+### Human-in-the-Loop
+
+The agent will recommend and plan, but the business owner remains responsible for approving important decisions.
+
+For example, the agent may recommend:
+
+> "Work on Order #024 for two hours this afternoon because it has the closest deadline and all required materials are available."
+
+The business owner can then approve, modify or reject the recommendation.
+
+This keeps the system useful without allowing an AI model to make irreversible business decisions without review.
+
+### AI Involvement Level
+
+**AI Involvement Level: High, with controlled system actions.**
+
+A high level of AI involvement is appropriate because the central problem is not simply storing business information. The agent needs to reason across different types of information and determine what should happen next.
+
+However, AI will not be responsible for exact inventory arithmetic, permanent database changes or other operations where predictable results are important. These will be handled by deterministic system logic and confirmed by the business owner where appropriate.
+
+
+## 04. **Goals & Success Criteria**
 
 Primary goal: Reduce the mental overhead of running the business by letting the business owner ask natural questions and get answers grounded in her actual orders, stock, and calendar — instead of holding it all in her head or across spreadsheets/notes apps.
 
@@ -64,7 +153,7 @@ E-commerce storefront
 Automated customer messaging without the business owner's review
 
 
-## 04. **Scope: MVP vs Final Vision**
+## 05. **Scope: MVP vs Final Vision**
 
 MVP (Minimum Viable Product)
 
