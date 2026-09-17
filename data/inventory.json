@@ -1,0 +1,30 @@
+JSON
+[
+  {
+    "id": "MAT-001",
+    "name": "Black Denim",
+    "category": "Fabric",
+    "unit": "m",
+    "physical_qty": 5.0,
+    "reserved_qty": 1.0,
+    "available_qty": 4.0
+  },
+  {
+    "id": "MAT-002",
+    "name": "Red Satin",
+    "category": "Fabric",
+    "unit": "m",
+    "physical_qty": 2.0,
+    "reserved_qty": 0.5,
+    "available_qty": 1.5
+  },
+  {
+    "id": "MAT-003",
+    "name": "Metal Zips (12 inch)",
+    "category": "Fastenings",
+    "unit": "pieces",
+    "physical_qty": 10,
+    "reserved_qty": 2,
+    "available_qty": 8
+  }
+]
