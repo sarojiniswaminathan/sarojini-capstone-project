@@ -3,10 +3,11 @@
 the result; the tools themselves are 100% deterministic Python.
 """
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 try:
     from google_auth_oauthlib.flow import InstalledAppFlow
@@ -16,7 +17,7 @@ except ModuleNotFoundError:  # pragma: no cover - optional dependency unless cal
 # Fetch credentials and redirect URI from .env
 CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8080/")
+REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://127.0.0.1:8000/")
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
