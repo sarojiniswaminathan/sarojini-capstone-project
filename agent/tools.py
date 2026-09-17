@@ -2,6 +2,49 @@
 (plan.md Section 11). Claude decides *which* tool to call and *how to explain*
 the result; the tools themselves are 100% deterministic Python.
 """
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+try:
+    from google_auth_oauthlib.flow import InstalledAppFlow
+except ModuleNotFoundError:  # pragma: no cover - optional dependency unless calendar auth is used
+    InstalledAppFlow = None
+
+# Fetch credentials and redirect URI from .env
+CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8080/")
+
+SCOPES = ["https://www.googleapis.com/auth/calendar"]
+
+def get_calendar_credentials():
+    """Authenticates the user and returns OAuth2 credentials."""
+    if InstalledAppFlow is None:
+        raise RuntimeError(
+            "google-auth-oauthlib is required for Google Calendar authentication. "
+            "Install it with: pip install google-auth-oauthlib"
+        )
+
+    client_config = {
+        "web": {
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [REDIRECT_URI]
+        }
+    }
+
+    # Initialize the OAuth flow using the config dictionary
+    flow = InstalledAppFlow.from_client_config(client_config, scopes=SCOPES)
+    flow.redirect_uri = REDIRECT_URI
+
+    # Return credentials (opens local browser tab for login)
+    creds = flow.run_local_server(port=8080)
+    return creds
 
 from . import inventory
 from . import orders as orders_mod

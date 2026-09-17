@@ -4,10 +4,13 @@ works correctly on its own. Run with: python -m agent.demo
 """
 
 import json
+from dotenv import load_dotenv
 
-from .db import reset_db
-from . import seed_data
-from . import planning
+load_dotenv()
+
+from agent.db import reset_db
+from agent import seed_data
+from agent import planning
 
 
 def main():
