@@ -1,43 +1,21 @@
-## [YYYY-MM-DD HH:MM] Short description of what shipped
+# Capstone Build Log — Tailoring Business Agent
 
-- Time spent: 
-- Rough tokens used: 
-- What shipped: 
-- Notes / follow-ups:
+## [2026-09-10] - Assessment 1: System Architecture, Data Schema & AI Strategy
 
-## [2026-09-11] Initial project plan
+### 1. Key Metrics
+- **Date:** September 10, 2026
+- **Time Spent:** 3.0 Hours
+- **Approx Tokens Used:** ~12,000 tokens
 
-- Time spent: ~30 min (conversation-based, not precisely tracked)
-- Rough tokens used: not tracked for this session
-- What shipped: `tailoring business agent.md` — full project plan covering overview, 
-  core concept, goals/success criteria, MVP vs. final scope, AI-involvement level, 
-  data model, build phases, and open questions.
-- Notes / follow-ups: Not yet committed to Git — do that next.
+### 2. What Shipped
+- **Core Architecture & Schema:** Designed and deployed SQLite database models (`agent/schema.sql`, `agent/db.py`) handling three core tailoring order types: `date_restricted`, `exploratory_sourcing`, and `alterations`.
+- **Fractional Inventory Model:** Built `agent/inventory.py` to support explicit tracking across `physical_qty`, `reserved_qty`, and `available_qty` to prevent inventory double-booking.
+- **Academic Calendar Integration:** Created initial seed datasets (`data/college_calendar.json` and `data/inventory.json`) to map college conflict awareness against production labor hours.
+- **AI-vs-Deterministic Execution Strategy:** Established a strict system split where price and inventory calculations remain deterministic while intent parsing and priority scoring are handled by AI.
+- **Git & Environment Security:** Configured `.gitignore` to protect sensitive local OAuth client secrets and user calendar tokens (`credentials.json`).
 
-## [2026-09-15] Detailed plan finalised (PR #5) + MVP build
+### 3. Honest Review: What Broke & How Fixed
+- **Documentation Path Mismatch:** Initial project logs referenced an external file named `tailoring business agent.md`, which created path mismatches and left `BUILD_LOG.md` unpopulated in the repository root.
+- **How Fixed:** Removed references to `tailoring business agent.md`, standardized all capstone documentation, and consolidated all build history directly inside `BUILD_LOG.md`.
 
-- Time spent: not precisely tracked (agent session)
-- Rough tokens used: not tracked
-- What shipped:
-  - `plan.md` expanded to full detailed plan (837 lines, sections 01-28: order types,
-    priority system, fractional inventory, sourcing, scheduling, production time
-    estimates, Instagram/marketing, Apple Calendar, customer catalogues, agent skills,
-    MVP/phased roadmap). Merged via PR #5 on branch `final-detailed-plan`.
-  - `agent/` — working MVP implementation of Section 22's scope:
-    - Deterministic core: `db.py`, `schema.sql`, `inventory.py`, `orders.py`,
-      `scheduling.py`, `priority.py`, `planning.py` (no AI/API key required).
-    - AI layer: `tools.py` (15 tool definitions) + `agent.py` (Claude tool-use loop)
-      + `cli.py` (chat REPL).
-    - `seed_data.py` — example data mirroring the Order #024/#031/#042 scenarios
-      already used throughout plan.md.
-    - `demo.py` — runs all four MVP core queries with no API key needed; verified
-      working end to end.
-  - `requirements.txt`, `.gitignore`, `README.md` (setup + usage + design notes).
-- Notes / follow-ups:
-  - Calendar (college schedule) is manual input for the MVP (`add_commitment`) —
-    Apple Calendar integration explicitly deferred, per user decision this session.
-  - Chat agent (`cli.py`/`agent.py`) needs `ANTHROPIC_API_KEY` set to run; deterministic
-    core (`demo.py`) does not.
-  - Not yet committed to Git.
-  - Next: decide on committing this, then move to Phase 2 items (shopping-trip
-    batching, historical analysis) or real data entry to replace the seed fixtures.
+---
