@@ -3,4 +3,5 @@ __pycache__/
 agent/tailoring.db
 .env
 .DS_Store
-.env
+token.json
+static/uploads/

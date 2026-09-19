@@ -1,7 +1,8 @@
 -- Tailoring Business Agent — MVP schema
 -- Mirrors plan.md Sections 05 (Order Data Model), 07 (Materials Inventory),
--- 08 (Material Sourcing), 09 (Scheduling). Calendar/commitments are manual
--- user input for the MVP (Apple Calendar integration deferred — Section 14).
+-- 08 (Material Sourcing), 09 (Scheduling). The calendar itself is the user's
+-- actual Google Calendar (Section 14) — there is no local commitments table;
+-- agent/google_calendar.py reads/writes it directly.
 
 CREATE TABLE IF NOT EXISTS materials (
     id            TEXT PRIMARY KEY,
@@ -11,6 +12,7 @@ CREATE TABLE IF NOT EXISTS materials (
     unit          TEXT NOT NULL,        -- m | spool | pieces | ...
     physical_qty  REAL NOT NULL DEFAULT 0,
     notes         TEXT,                 -- e.g. "previously used for: Corset #024"
+    photo_path    TEXT,                 -- e.g. "uploads/materials/MAT-BLACK-COTTON.jpg" under static/ (Section 15: Visual Fabric Inventory)
     created_at    TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -26,17 +28,36 @@ CREATE TABLE IF NOT EXISTS material_transactions (
 );
 
 CREATE TABLE IF NOT EXISTS orders (
-    id                    TEXT PRIMARY KEY,
-    customer              TEXT NOT NULL,
-    order_type            TEXT NOT NULL,   -- date_restricted | exploratory_available | exploratory_sourcing | alteration
+    id                     TEXT PRIMARY KEY,
+    customer               TEXT NOT NULL,
+    order_type             TEXT NOT NULL,   -- date_restricted | exploratory_available | exploratory_sourcing | alteration
     garment                TEXT,
     description            TEXT,
     deadline               TEXT,            -- ISO date, NULL if flexible
-    flexibility             TEXT NOT NULL DEFAULT 'fixed',  -- fixed | flexible
-    status                  TEXT NOT NULL DEFAULT 'new',    -- new|planned|in_progress|waiting_material|finishing|completed
-    estimated_hours         REAL,
-    pickup_delivery_date    TEXT,
-    created_at              TEXT NOT NULL DEFAULT (datetime('now'))
+    flexibility            TEXT NOT NULL DEFAULT 'fixed',  -- fixed | flexible
+    status                 TEXT NOT NULL DEFAULT 'new',    -- new|planned|in_progress|waiting_material|finishing|completed
+    estimated_hours        REAL,
+    pickup_delivery_date   TEXT,
+    created_at             TEXT NOT NULL DEFAULT (datetime('now')),
+    -- Email-driven intake (agent/email_intake.py) — a request detected from
+    -- email starts 'pending' until the owner accepts/declines (directly in
+    -- the thread, or via a Google Calendar confirmation invite) and is
+    -- excluded from scheduling/priority until then (Section 12).
+    confirmation_status    TEXT NOT NULL DEFAULT 'confirmed',  -- pending | confirmed
+    source                 TEXT NOT NULL DEFAULT 'chat',       -- chat | email
+    source_email_thread_id TEXT,
+    confirmation_event_id  TEXT,            -- Google Calendar invite event id, while pending
+    pending_materials_json TEXT             -- materials extracted from email, applied once confirmed
+);
+
+-- One row per Gmail message email_intake.py has already handled, so a poll
+-- cycle never reprocesses the same email twice.
+CREATE TABLE IF NOT EXISTS processed_emails (
+    message_id     TEXT PRIMARY KEY,
+    thread_id      TEXT,
+    processed_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    classification TEXT,   -- new_order | order_reply | supplier_update | irrelevant
+    order_id       TEXT
 );
 
 -- One production project per order for the MVP (Order -> Project -> Materials -> Inventory, Section 07).
@@ -57,15 +78,6 @@ CREATE TABLE IF NOT EXISTS project_materials (
     planned_qty REAL NOT NULL,
     actual_qty  REAL,                 -- filled in when usage is recorded
     status      TEXT NOT NULL DEFAULT 'reserved'  -- reserved | consumed
-);
-
--- Calendar / commitments — manual user input for the MVP (college classes, exams, etc.)
-CREATE TABLE IF NOT EXISTS commitments (
-    id             INTEGER PRIMARY KEY AUTOINCREMENT,
-    title          TEXT NOT NULL,
-    start_datetime TEXT NOT NULL,   -- ISO datetime
-    end_datetime   TEXT NOT NULL,
-    type           TEXT NOT NULL DEFAULT 'college'  -- college | personal | blocked
 );
 
 -- Logged production time (feeds rescheduling + Section 10/15 historical estimates later).

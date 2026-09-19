@@ -4,70 +4,65 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tailoring Business Agent</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        max-width: 900px;
-        margin: 40px auto;
-        padding: 20px;
-        background: #f7f7f7;
-        color: #222;
-      }
-      .chat-box {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-      }
-      #messages {
-        min-height: 300px;
-        max-height: 500px;
-        overflow-y: auto;
-        margin-bottom: 16px;
-        padding: 12px;
-        background: #fafafa;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-      }
-      .message {
-        margin: 10px 0;
-        padding: 10px 12px;
-        border-radius: 8px;
-      }
-      .user {
-        background: #dfeeff;
-        margin-left: 40px;
-      }
-      .assistant {
-        background: #eaf7ea;
-        margin-right: 40px;
-      }
-      form {
-        display: flex;
-        gap: 12px;
-      }
-      input {
-        flex: 1;
-        padding: 12px;
-        font-size: 16px;
-      }
-      button {
-        padding: 12px 18px;
-        font-size: 16px;
-        cursor: pointer;
-      }
-    </style>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
   </head>
   <body>
-    <h1>Tailoring Business Agent</h1>
-    <div class="chat-box">
-      <div id="messages"></div>
-      <form id="chat-form">
-        <input id="message" type="text" placeholder="Ask about orders, fabric, or today's plan" autocomplete="off" />
-        <button type="submit">Send</button>
-      </form>
+    <header class="topbar">
+      <h1>Tailoring Business Agent</h1>
+      <div class="topbar-status">
+        <span id="pending-badge" class="pending-badge" hidden></span>
+        <div id="google-status" class="google-status"></div>
+      </div>
+    </header>
+
+    <section id="glance-strip" class="glance-strip" aria-label="Material inventory at a glance"></section>
+
+    <main class="calendar-area">
+      <div id="calendar-banner" class="calendar-banner" hidden>
+        This is your real Google Calendar — <a href="/auth/google/login">connect it</a> to see and add commitments here.
+      </div>
+      <div id="calendar"></div>
+    </main>
+
+    <aside id="day-panel" class="day-panel" hidden>
+      <button id="day-panel-close" class="panel-close" aria-label="Close">&times;</button>
+      <div id="day-panel-content"></div>
+    </aside>
+
+    <div id="chat-widget" class="chat-widget">
+      <button id="chat-toggle" class="chat-toggle" type="button">💬 Ask the agent</button>
+      <div id="chat-drawer" class="chat-drawer" hidden>
+        <div class="chat-box">
+          <div id="messages"></div>
+          <form id="chat-form">
+            <input id="message" type="text" placeholder="Ask about orders, fabric, or today's plan" autocomplete="off" />
+            <button type="submit">Send</button>
+          </form>
+        </div>
+      </div>
     </div>
 
-    <script src="/static/app.js"></script>
+    <template id="material-card-template">
+      <div class="material-card">
+        <div class="material-photo">
+          <img alt="" hidden />
+          <span class="material-photo-placeholder">🧵</span>
+          <label class="photo-upload" title="Add a photo">
+            📷<input type="file" accept="image/*" hidden />
+          </label>
+        </div>
+        <div class="material-name"></div>
+        <div class="material-qty"></div>
+        <div class="material-adjust">
+          <input type="number" step="any" placeholder="+/- qty" />
+          <button type="button">Save</button>
+        </div>
+      </div>
+    </template>
+
+    <script src="/static/chat.js"></script>
+    <script src="/static/inventory.js"></script>
+    <script src="/static/calendar.js"></script>
   </body>
 </html>
