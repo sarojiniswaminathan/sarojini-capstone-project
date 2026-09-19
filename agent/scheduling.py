@@ -1,36 +1,42 @@
 """Deterministic scheduling logic — plan.md Section 09.
 
-Calendar/commitments are manual user input for the MVP (Apple Calendar
-integration is deferred — Section 14). The business owner (or the agent,
-conversationally, per Section 11) enters college classes/exams/other
-commitments via add_commitment(); everything else is computed from that.
+The calendar is the business owner's actual Google Calendar (Section 14) —
+there is no separate local commitments store to keep in sync. Every
+commitment is read from and written directly to Google Calendar; if it isn't
+connected yet, there's simply no commitment data (every day looks fully
+free) until it is.
 """
 
 from datetime import datetime, timedelta, date, time
+
+from . import google_calendar
 
 DEFAULT_WORK_WINDOW = (time(9, 0), time(21, 0))  # 9am-9pm, adjustable per call
 
 
 def add_commitment(conn, title, start_datetime, end_datetime, type_="college"):
-    """start_datetime/end_datetime: ISO strings, e.g. '2026-09-16T10:00:00'."""
-    conn.execute(
-        "INSERT INTO commitments (title, start_datetime, end_datetime, type) VALUES (?, ?, ?, ?)",
-        (title, start_datetime, end_datetime, type_),
+    """start_datetime/end_datetime: ISO strings, e.g. '2026-09-16T10:00:00'.
+    Writes directly to the connected Google Calendar. Returns the created
+    Google event id, or None if Google Calendar isn't connected."""
+    return google_calendar.create_event(title, start_datetime, end_datetime)
+
+
+def list_commitments(conn, start_range, end_range):
+    """Commitments between start_range and end_range (ISO datetime strings)
+    from the connected Google Calendar, shaped like
+    {id, title, start_datetime, end_datetime}. Empty if not connected."""
+    items = google_calendar.list_events(
+        google_calendar.to_rfc3339(start_range), google_calendar.to_rfc3339(end_range)
     )
-    conn.commit()
+    return google_calendar.events_as_intervals(items)
 
 
-def list_commitments(conn, start_range=None, end_range=None):
-    query = "SELECT * FROM commitments WHERE 1=1"
-    params = []
-    if start_range:
-        query += " AND end_datetime > ?"
-        params.append(start_range)
-    if end_range:
-        query += " AND start_datetime < ?"
-        params.append(end_range)
-    query += " ORDER BY start_datetime"
-    return conn.execute(query, params).fetchall()
+def _parse_naive(dt_str):
+    """This app doesn't model timezones anywhere, so a Google event's offset
+    (if any) is dropped rather than compared against the naive work-window
+    datetimes below."""
+    dt = datetime.fromisoformat(dt_str)
+    return dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
 
 
 def _free_hours_on_day(conn, day: date, work_window=DEFAULT_WORK_WINDOW):
@@ -42,8 +48,8 @@ def _free_hours_on_day(conn, day: date, work_window=DEFAULT_WORK_WINDOW):
     # Build list of busy (start, end) intervals clipped to the work window, merged.
     intervals = []
     for c in commitments:
-        c_start = max(datetime.fromisoformat(c["start_datetime"]), day_start)
-        c_end = min(datetime.fromisoformat(c["end_datetime"]), day_end)
+        c_start = max(_parse_naive(c["start_datetime"]), day_start)
+        c_end = min(_parse_naive(c["end_datetime"]), day_end)
         if c_end > c_start:
             intervals.append((c_start, c_end))
     intervals.sort()

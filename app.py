@@ -1,11 +1,13 @@
+import asyncio
 import json
+import logging
 import os
 import re
 from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -14,11 +16,41 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 from agent.db import get_connection
 from agent import agent as agent_mod
-from agent import inventory, planning
+from agent import email_intake, google_calendar, inventory, planning
+from calendar_api import router as calendar_router
+from email_api import router as email_router
+from inventory_api import router as inventory_router
+
+logger = logging.getLogger("tailoring_agent.email_poll")
 
 app = FastAPI(title="Tailoring Business Agent")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+app.include_router(calendar_router)
+app.include_router(inventory_router)
+app.include_router(email_router)
+
+
+async def _email_poll_loop():
+    """Runs for the lifetime of the server: periodically checks the inbox
+    for new orders/replies/supplier updates (agent/email_intake.py) and
+    checks whether any pending order's confirmation invite has been
+    answered yet. A single bad cycle (Google/AI hiccup, one bad email) must
+    never kill the loop — it just logs and tries again next interval."""
+    interval = int(os.environ.get("EMAIL_POLL_INTERVAL_SECONDS", "180"))
+    while True:
+        try:
+            conn = get_connection()
+            email_intake.poll_and_process(conn)
+            email_intake.check_pending_confirmations(conn)
+        except Exception:
+            logger.exception("Email poll cycle failed")
+        await asyncio.sleep(interval)
+
+
+@app.on_event("startup")
+async def _start_email_poller():
+    asyncio.create_task(_email_poll_loop())
 
 
 class ChatRequest(BaseModel):
@@ -182,6 +214,13 @@ def _direct_data_reply(conn, message):
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
+    # The registered Google OAuth redirect URI is the app root (see
+    # GOOGLE_REDIRECT_URI in .env / agent/google_calendar.py), so the
+    # consent-flow callback lands here rather than on a dedicated route.
+    code = request.query_params.get("code")
+    if code:
+        google_calendar.exchange_code(code)
+        return RedirectResponse("/")
     return templates.TemplateResponse(request, "index.html", {"request": request})
 
 

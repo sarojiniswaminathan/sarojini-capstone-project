@@ -1,51 +1,10 @@
 """Tool definitions bridging the AI reasoning layer to the deterministic core
 (plan.md Section 11). Claude decides *which* tool to call and *how to explain*
 the result; the tools themselves are 100% deterministic Python.
+
+Google Calendar auth/sync lives in google_calendar.py — add_commitment and
+create_order call into it directly, so no tool-level wiring is needed here.
 """
-import os
-from pathlib import Path
-
-from dotenv import load_dotenv
-
-load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
-
-try:
-    from google_auth_oauthlib.flow import InstalledAppFlow
-except ModuleNotFoundError:  # pragma: no cover - optional dependency unless calendar auth is used
-    InstalledAppFlow = None
-
-# Fetch credentials and redirect URI from .env
-CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://127.0.0.1:8000/")
-
-SCOPES = ["https://www.googleapis.com/auth/calendar"]
-
-def get_calendar_credentials():
-    """Authenticates the user and returns OAuth2 credentials."""
-    if InstalledAppFlow is None:
-        raise RuntimeError(
-            "google-auth-oauthlib is required for Google Calendar authentication. "
-            "Install it with: pip install google-auth-oauthlib"
-        )
-
-    client_config = {
-        "web": {
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [REDIRECT_URI]
-        }
-    }
-
-    # Initialize the OAuth flow using the config dictionary
-    flow = InstalledAppFlow.from_client_config(client_config, scopes=SCOPES)
-    flow.redirect_uri = REDIRECT_URI
-
-    # Return credentials (opens local browser tab for login)
-    creds = flow.run_local_server(port=8080)
-    return creds
 
 from . import inventory
 from . import orders as orders_mod
@@ -217,8 +176,10 @@ TOOLS = [
     },
     {
         "name": "add_commitment",
-        "description": "Add a college class/exam/other fixed commitment to the schedule (Section 09). "
-                        "The calendar is manual input for this MVP.",
+        "description": "Add a college class/exam/other fixed commitment directly to the business "
+                        "owner's connected Google Calendar (Section 09/14) — this IS her real calendar, "
+                        "there's no separate one. If it isn't connected yet, tell her to connect it "
+                        "from the calendar page first.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -313,10 +274,16 @@ def dispatch(conn, name, tool_input):
         return {"status": "logged", "remaining_hours": orders_mod.remaining_hours(conn, project["id"])}
 
     if name == "add_commitment":
-        scheduling.add_commitment(
+        event_id = scheduling.add_commitment(
             conn, tool_input["title"], tool_input["start_datetime"], tool_input["end_datetime"],
             type_=tool_input.get("type", "college"),
         )
-        return {"status": "added"}
+        if event_id is None:
+            return {
+                "status": "not_connected",
+                "message": "Google Calendar isn't connected yet — connect it from the calendar "
+                           "page (top of the page), then try again.",
+            }
+        return {"status": "added", "google_event_id": event_id}
 
     return {"error": f"Unknown tool: {name}"}

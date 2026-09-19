@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./.venv/bin/python -m pytest tests/test_agent.py -q)",
+      "Bash(./.venv/bin/python -m pytest tests/test_email_intake.py -q)",
+      "Bash(curl -s http://127.0.0.1:8000/health)",
+      "Bash(curl -s http://127.0.0.1:8000/orders/pending)",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/email/check-now)",
+      "Bash(curl -s \"http://127.0.0.1:8000/calendar/events?start=2026-09-01T00:00:00&end=2026-10-15T00:00:00\")",
+      "Bash(./.venv/bin/python3 -m json.tool)"
+    ]
+  }
+}

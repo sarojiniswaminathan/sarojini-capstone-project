@@ -1,12 +1,15 @@
 """Example data mirroring the scenarios used throughout plan.md, so the MVP
 is demonstrable immediately. Replace with real data whenever ready — this is
-just a starting fixture, not a hardcoded assumption."""
+just a starting fixture, not a hardcoded assumption.
+
+There's no local commitments/college-calendar fixture here: the calendar is
+the business owner's actual Google Calendar (Section 14), and seeding can't
+(and shouldn't) write into someone's real personal calendar."""
 
 from datetime import date, timedelta
 
 from . import inventory
 from . import orders as orders_mod
-from . import scheduling
 
 
 def seed(conn):
@@ -51,14 +54,6 @@ def seed(conn):
     )
     orders_mod.allocate_material(conn, prj_042, "MAT-BLACK-COTTON", 2.8)
     orders_mod.update_order_status(conn, "ORD-042", "planned")
-
-    # --- College commitments (manual input, Section 09) ---
-    for i in range(1, 15):
-        d = today + timedelta(days=i)
-        if d.weekday() in (1, 3):  # Tue/Thu "college classes"
-            scheduling.add_commitment(
-                conn, "College classes", f"{d.isoformat()}T09:00:00", f"{d.isoformat()}T15:00:00", "college"
-            )
 
     conn.commit()
 

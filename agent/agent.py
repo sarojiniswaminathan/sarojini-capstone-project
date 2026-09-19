@@ -24,9 +24,9 @@ except ModuleNotFoundError:  # pragma: no cover - optional if using Anthropic on
 
 from . import tools
 
-# Default to a Gemini model when using the Gemini client, while still allowing an
-# Anthropic override for the Claude-based path.
-MODEL = os.environ.get("TAILORING_AGENT_MODEL", "gemini-3.6-flash")
+# Model used on the Anthropic path only — GeminiClient reads its own GEMINI_MODEL
+# env var independently (see GeminiClient.__init__ below).
+ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", os.environ.get("TAILORING_AGENT_MODEL", "claude-sonnet-5"))
 
 SYSTEM_PROMPT = """You are the Tailoring Business Agent — an AI production and business \
 assistant for a small custom-clothing business run by a college student alongside her studies.
@@ -49,6 +49,9 @@ tools return (deadline, material readiness, progress, etc.) — don't just state
 shortage or conflict, surface it plainly rather than glossing over it.
 - The calendar (college commitments) is manual input for now — if the owner mentions a class \
 or commitment, use add_commitment to record it rather than asking her to enter it elsewhere.
+- Most orders now arrive automatically from her email (agent/email_intake.py) rather than being \
+typed here — an ORD-EMAIL-* order you don't recognize is normal, not an error; chat is for \
+follow-up questions and corrections, not the primary way orders get entered anymore.
 """
 
 
@@ -62,7 +65,7 @@ def run_agent_turn(conn, client, messages, max_tool_rounds=8):
 
     for _ in range(max_tool_rounds):
         response = client.messages.create(
-            model=MODEL,
+            model=ANTHROPIC_MODEL,
             max_tokens=1500,
             system=SYSTEM_PROMPT,
             tools=tools.TOOLS,
@@ -218,10 +221,17 @@ class GeminiClient:
                 }
             })
 
-        follow_up_contents = contents + [{
-            "role": "model",
-            "parts": [{"function_call": {"name": call["name"], "args": call.get("args", {})}} for call in calls],
-        }, {
+        # Reuse Gemini's original model content instead of rebuilding the
+        # function_call parts. The original parts contain thought_signature,
+        # which Gemini requires on the follow-up request.
+        model_content = None
+        candidates = getattr(response, "candidates", None) or []
+        if candidates:
+            model_content = getattr(candidates[0], "content", None)
+        if model_content is None:
+            return "The model returned a tool call without reusable response content."
+
+        follow_up_contents = contents + [model_content, {
             "role": "user",
             "parts": function_response_parts,
         }]
@@ -231,8 +241,10 @@ class GeminiClient:
 
 
 def make_client():
-    if os.environ.get("GEMINI_API_KEY"):
-        return GeminiClient()
+    # Anthropic is preferred whenever it's configured (e.g. after exhausting a
+    # Gemini free-tier quota) — Gemini is only used as a fallback.
     if anthropic is not None and os.environ.get("ANTHROPIC_API_KEY"):
         return anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from the environment
-    raise RuntimeError("No AI API key found. Set GEMINI_API_KEY or ANTHROPIC_API_KEY.")
+    if os.environ.get("GEMINI_API_KEY"):
+        return GeminiClient()
+    raise RuntimeError("No AI API key found. Set ANTHROPIC_API_KEY or GEMINI_API_KEY.")
