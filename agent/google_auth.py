@@ -102,7 +102,11 @@ def exchange_code(code: str) -> bool:
     flow = Flow.from_client_config(_client_config(), scopes=SCOPES, redirect_uri=REDIRECT_URI)
     try:
         flow.fetch_token(code=code)
-    except Exception:
+    except Exception as exc:
+        import traceback
+        (Path(__file__).resolve().parents[1] / "oauth_debug.log").write_text(
+            f"{exc!r}\n\n{traceback.format_exc()}"
+        )
         return False
     TOKEN_PATH.write_text(flow.credentials.to_json())
     return True
