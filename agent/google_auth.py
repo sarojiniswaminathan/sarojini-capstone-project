@@ -34,6 +34,10 @@ CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET_2") or os.getenv("GOOGLE_CLIENT_
 # Cloud Console. Defaults to the app root since that's what a Google OAuth
 # client set up for this app would typically already have registered.
 REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI") or "http://127.0.0.1:8000/"
+# oauthlib refuses to exchange a code over plain http, which would otherwise
+# make exchange_code() fail silently for local (non-https) redirect URIs.
+if REDIRECT_URI.startswith("http://"):
+    os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
 SCOPES = [
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/gmail.readonly",
