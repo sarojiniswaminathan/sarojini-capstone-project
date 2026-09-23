@@ -51,15 +51,6 @@
       monthSelect.value = mid.getMonth();
       yearSelect.value = mid.getFullYear();
     },
-    eventsSet: function (events) {
-      const datesWithEvents = new Set(
-        events.map((e) => (e.startStr || '').slice(0, 10)).filter(Boolean)
-      );
-      calendarEl.querySelectorAll('.fc-daygrid-day').forEach((cell) => {
-        const date = cell.getAttribute('data-date');
-        cell.classList.toggle('has-event', datesWithEvents.has(date));
-      });
-    },
     events: async function (fetchInfo, successCallback, failureCallback) {
       try {
         const url = `/calendar/events?start=${encodeURIComponent(fetchInfo.startStr)}&end=${encodeURIComponent(fetchInfo.endStr)}`;
