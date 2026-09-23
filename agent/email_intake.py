@@ -18,6 +18,7 @@ import json
 import os
 import re
 import uuid
+from datetime import date
 
 from dotenv import load_dotenv
 from pathlib import Path
@@ -42,6 +43,7 @@ from . import orders as orders_mod
 
 EXTRACTION_SYSTEM_PROMPT = """You classify and extract structured data from a single email in the \
 inbox of a small custom tailoring business. The business owner's own email address is: {owner_email}
+Today's date is {today}.
 
 Return ONLY a single JSON object (no prose, no markdown fences) with exactly this shape:
 {{
@@ -68,6 +70,8 @@ fill only supplier_material_name/supplier_qty.
 - owner_decision is "unclear" whenever the thread does not contain a clear yes/no from the owner \
 herself — never guess her intent from the customer's tone alone.
 - Never invent a deadline, quantity, or material that isn't actually stated in the email.
+- If a deadline gives a month/day with no year (e.g. "Oct 10th"), resolve it to the nearest such \
+date that is on or after today — i.e. this year if that date hasn't passed yet, otherwise next year.
 """
 
 
@@ -81,7 +85,7 @@ def _make_extraction_caller():
             response = client.messages.create(
                 model=agent_mod.ANTHROPIC_MODEL,
                 max_tokens=800,
-                system=EXTRACTION_SYSTEM_PROMPT.format(owner_email=owner_email),
+                system=EXTRACTION_SYSTEM_PROMPT.format(owner_email=owner_email, today=date.today().isoformat()),
                 messages=[{"role": "user", "content": prompt}],
             )
             return "".join(block.text for block in response.content if block.type == "text")
@@ -94,7 +98,7 @@ def _make_extraction_caller():
         def call(prompt, owner_email):
             model = genai.GenerativeModel(
                 model_name=os.environ.get("GEMINI_MODEL", "gemini-3.6-flash"),
-                system_instruction=EXTRACTION_SYSTEM_PROMPT.format(owner_email=owner_email),
+                system_instruction=EXTRACTION_SYSTEM_PROMPT.format(owner_email=owner_email, today=date.today().isoformat()),
             )
             response = model.generate_content(prompt)
             return agent_mod.extract_text_from_response(response)

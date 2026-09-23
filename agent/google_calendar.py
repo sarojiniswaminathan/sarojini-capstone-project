@@ -152,6 +152,8 @@ def to_rfc3339(value: str) -> str:
     """Ensure a timezone designator is present, as the Calendar API requires.
     A bare naive datetime/date string (this app doesn't model timezones
     anywhere else either) is treated as already being in the caller's zone."""
+    if "T" not in value:  # bare "YYYY-MM-DD" — needs a time component too
+        return f"{value}T00:00:00Z"
     tail = value[10:]  # skip the "YYYY-MM-DD" date portion
     if value.endswith("Z") or "+" in tail or "-" in tail:
         return value
