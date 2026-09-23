@@ -8,22 +8,41 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
   </head>
   <body>
-    <header class="topbar">
-      <h1>Tailoring Business Agent</h1>
-      <div class="topbar-status">
-        <span id="pending-badge" class="pending-badge" hidden></span>
-        <div id="google-status" class="google-status"></div>
-      </div>
-    </header>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-title">Tailor Your Calendar</div>
+        <nav id="fabric-tree" class="fabric-tree"></nav>
+      </aside>
 
-    <section id="glance-strip" class="glance-strip" aria-label="Material inventory at a glance"></section>
+      <div class="main-col">
+        <header class="topbar">
+          <h1>Tailoring Business Agent</h1>
+          <div class="topbar-status">
+            <span id="pending-badge" class="pending-badge" hidden></span>
+            <div id="google-status" class="google-status"></div>
+          </div>
+        </header>
 
-    <main class="calendar-area">
-      <div id="calendar-banner" class="calendar-banner" hidden>
-        This is your real Google Calendar — <a href="/auth/google/login">connect it</a> to see and add commitments here.
+        <main class="calendar-area">
+          <div id="calendar-banner" class="calendar-banner" hidden>
+            This is your real Google Calendar — <a href="/auth/google/login">connect it</a> to see and add commitments here.
+          </div>
+          <div class="calendar-card">
+            <div class="calendar-toolbar">
+              <button id="cal-prev" class="cal-nav" type="button" aria-label="Previous month">&lsaquo;</button>
+              <select id="cal-month" class="cal-select"></select>
+              <select id="cal-year" class="cal-select"></select>
+              <button id="cal-next" class="cal-nav" type="button" aria-label="Next month">&rsaquo;</button>
+              <div class="cal-view-toggle">
+                <button id="cal-view-month" class="cal-view-btn active" type="button">Month</button>
+                <button id="cal-view-week" class="cal-view-btn" type="button">Week</button>
+              </div>
+            </div>
+            <div id="calendar"></div>
+          </div>
+        </main>
       </div>
-      <div id="calendar"></div>
-    </main>
+    </div>
 
     <aside id="day-panel" class="day-panel" hidden>
       <button id="day-panel-close" class="panel-close" aria-label="Close">&times;</button>
@@ -43,20 +62,33 @@
       </div>
     </div>
 
-    <template id="material-card-template">
-      <div class="material-card">
-        <div class="material-photo">
-          <img alt="" hidden />
-          <span class="material-photo-placeholder">🧵</span>
+    <template id="tree-category-template">
+      <div class="tree-category">
+        <button type="button" class="tree-category-header">
+          <span class="tree-chevron">&rsaquo;</span>
+          <span class="tree-category-name"></span>
+        </button>
+        <div class="tree-children" hidden></div>
+      </div>
+    </template>
+
+    <template id="tree-material-template">
+      <div class="tree-material">
+        <button type="button" class="tree-material-row">
+          <span class="tree-swatch">
+            <img alt="" hidden />
+          </span>
+          <span class="tree-material-label"></span>
+        </button>
+        <div class="tree-material-detail" hidden>
+          <div class="tree-material-qty"></div>
           <label class="photo-upload" title="Add a photo">
-            📷<input type="file" accept="image/*" hidden />
+            📷 Add photo<input type="file" accept="image/*" hidden />
           </label>
-        </div>
-        <div class="material-name"></div>
-        <div class="material-qty"></div>
-        <div class="material-adjust">
-          <input type="number" step="any" placeholder="+/- qty" />
-          <button type="button">Save</button>
+          <div class="material-adjust">
+            <input type="number" step="any" placeholder="+/- qty" />
+            <button type="button">Save</button>
+          </div>
         </div>
       </div>
     </template>

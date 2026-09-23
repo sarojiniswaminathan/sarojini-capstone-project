@@ -54,6 +54,7 @@ def material_summary(conn, material_id) -> dict:
     return {
         "id": material["id"],
         "name": material["name"],
+        "category": material["category"],
         "color": material["color"],
         "unit": material["unit"],
         "physical_qty": material["physical_qty"],

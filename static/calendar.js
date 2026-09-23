@@ -18,10 +18,48 @@
     }
   }
 
+  const monthSelect = document.getElementById('cal-month');
+  const yearSelect = document.getElementById('cal-year');
+  const prevBtn = document.getElementById('cal-prev');
+  const nextBtn = document.getElementById('cal-next');
+  const viewMonthBtn = document.getElementById('cal-view-month');
+  const viewWeekBtn = document.getElementById('cal-view-week');
+
+  const MONTH_NAMES = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  MONTH_NAMES.forEach((name, index) => {
+    const opt = document.createElement('option');
+    opt.value = index;
+    opt.textContent = name;
+    monthSelect.appendChild(opt);
+  });
+  const currentYear = new Date().getFullYear();
+  for (let year = currentYear - 5; year <= currentYear + 5; year += 1) {
+    const opt = document.createElement('option');
+    opt.value = year;
+    opt.textContent = year;
+    yearSelect.appendChild(opt);
+  }
+
   const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'dayGridMonth',
-    headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
+    headerToolbar: false,
     height: 'auto',
+    datesSet: function (info) {
+      const mid = calendar.getDate();
+      monthSelect.value = mid.getMonth();
+      yearSelect.value = mid.getFullYear();
+    },
+    eventsSet: function (events) {
+      const datesWithEvents = new Set(
+        events.map((e) => (e.startStr || '').slice(0, 10)).filter(Boolean)
+      );
+      calendarEl.querySelectorAll('.fc-daygrid-day').forEach((cell) => {
+        const date = cell.getAttribute('data-date');
+        cell.classList.toggle('has-event', datesWithEvents.has(date));
+      });
+    },
     events: async function (fetchInfo, successCallback, failureCallback) {
       try {
         const url = `/calendar/events?start=${encodeURIComponent(fetchInfo.startStr)}&end=${encodeURIComponent(fetchInfo.endStr)}`;
@@ -63,6 +101,25 @@
   });
 
   calendar.render();
+
+  prevBtn.addEventListener('click', () => calendar.prev());
+  nextBtn.addEventListener('click', () => calendar.next());
+  monthSelect.addEventListener('change', () => {
+    calendar.gotoDate(new Date(Number(yearSelect.value), Number(monthSelect.value), 1));
+  });
+  yearSelect.addEventListener('change', () => {
+    calendar.gotoDate(new Date(Number(yearSelect.value), Number(monthSelect.value), 1));
+  });
+  viewMonthBtn.addEventListener('click', () => {
+    calendar.changeView('dayGridMonth');
+    viewMonthBtn.classList.add('active');
+    viewWeekBtn.classList.remove('active');
+  });
+  viewWeekBtn.addEventListener('click', () => {
+    calendar.changeView('timeGridWeek');
+    viewWeekBtn.classList.add('active');
+    viewMonthBtn.classList.remove('active');
+  });
 
   function renderDay(data) {
     const plan = data.plan || {};
