@@ -7,7 +7,10 @@ missing auth, or any error — so the rest of the app behaves identically
 whether or not Google has ever been connected.
 """
 
+import base64
+import hashlib
 import os
+import secrets
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -84,15 +87,35 @@ def is_connected() -> bool:
     return _load_credentials() is not None
 
 
+# The Google Cloud OAuth client backing this app requires PKCE (Google mandates
+# it for "Desktop app" client types), so the authorization request and the
+# token exchange must share a code_verifier. This app has a single owner and
+# one auth flow in flight at a time, so a module-level variable is enough —
+# no need for per-session storage.
+_pending_code_verifier = None
+
+
 def get_auth_url():
     """Build the Google consent URL to redirect the user to. None if unconfigured."""
+    global _pending_code_verifier
     if not _configured():
         return None
+    _pending_code_verifier = secrets.token_urlsafe(64)[:128]
+    code_challenge = _s256_code_challenge(_pending_code_verifier)
     flow = Flow.from_client_config(_client_config(), scopes=SCOPES, redirect_uri=REDIRECT_URI)
     auth_url, _ = flow.authorization_url(
-        access_type="offline", include_granted_scopes="true", prompt="consent"
+        access_type="offline",
+        include_granted_scopes="true",
+        prompt="consent",
+        code_challenge=code_challenge,
+        code_challenge_method="S256",
     )
     return auth_url
+
+
+def _s256_code_challenge(verifier: str) -> str:
+    digest = hashlib.sha256(verifier.encode("ascii")).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
 
 
 def exchange_code(code: str) -> bool:
@@ -101,12 +124,8 @@ def exchange_code(code: str) -> bool:
         return False
     flow = Flow.from_client_config(_client_config(), scopes=SCOPES, redirect_uri=REDIRECT_URI)
     try:
-        flow.fetch_token(code=code)
-    except Exception as exc:
-        import traceback
-        (Path(__file__).resolve().parents[1] / "oauth_debug.log").write_text(
-            f"{exc!r}\n\n{traceback.format_exc()}"
-        )
+        flow.fetch_token(code=code, code_verifier=_pending_code_verifier)
+    except Exception:
         return False
     TOKEN_PATH.write_text(flow.credentials.to_json())
     return True
