@@ -19,30 +19,39 @@
 
   function renderMaterial(material) {
     const node = materialTemplate.content.cloneNode(true);
-    const row = node.querySelector('.tree-material-row');
+    const leaf = node.querySelector('.tree-leaf');
+    const label = node.querySelector('.tree-leaf-label');
     const detail = node.querySelector('.tree-material-detail');
-    const swatch = node.querySelector('.tree-swatch');
-    const img = node.querySelector('img');
+    const swatch = node.querySelector('.tree-leaf-swatch');
+    const img = swatch.querySelector('img');
 
-    if (material.photo_url) {
-      img.src = material.photo_url;
-      img.hidden = false;
-    } else if (material.color) {
-      swatch.style.background = material.color.toLowerCase();
+    const hasSwatch = Boolean(material.photo_url || material.color);
+    if (hasSwatch) {
+      swatch.hidden = false;
+      if (material.photo_url) {
+        img.src = material.photo_url;
+        img.hidden = false;
+      } else {
+        swatch.style.background = material.color.toLowerCase();
+      }
     }
 
-    node.querySelector('.tree-material-label').textContent = material.color
-      ? `${material.name} — ${material.color}`
-      : material.name;
+    label.textContent = material.color ? `${material.name} — ${material.color}` : material.name;
+    label.setAttribute('aria-selected', 'false');
     node.querySelector('.tree-material-qty').textContent =
       `${material.available_qty} ${material.unit} available · ${material.physical_qty} total · ${material.reserved_qty} reserved`;
 
-    row.addEventListener('click', () => {
-      detail.hidden = !detail.hidden;
-    });
+    function toggleSelected() {
+      const isSelected = leaf.classList.toggle('selected');
+      label.setAttribute('aria-selected', String(isSelected));
+      detail.hidden = !isSelected;
+    }
+
+    label.addEventListener('click', toggleSelected);
 
     const fileInput = node.querySelector('.photo-upload input');
-    fileInput.addEventListener('change', async () => {
+    fileInput.addEventListener('change', async (event) => {
+      event.stopPropagation();
       if (!fileInput.files.length) return;
       const formData = new FormData();
       formData.append('file', fileInput.files[0]);
@@ -52,6 +61,7 @@
       });
       loadInventory();
     });
+    node.querySelector('.photo-upload').addEventListener('click', (event) => event.stopPropagation());
 
     const qtyInput = node.querySelector('.material-adjust input');
     const saveBtn = node.querySelector('.material-adjust button');
@@ -79,11 +89,13 @@
     const children = node.querySelector('.tree-children');
 
     node.querySelector('.tree-category-name').textContent = titleCase(name);
+    header.setAttribute('aria-expanded', 'false');
     materials.forEach((material) => children.appendChild(renderMaterial(material)));
 
     header.addEventListener('click', () => {
-      children.hidden = !children.hidden;
-      chevron.classList.toggle('open', !children.hidden);
+      const isOpen = children.classList.toggle('open');
+      chevron.classList.toggle('open', isOpen);
+      header.setAttribute('aria-expanded', String(isOpen));
     });
 
     return node;
