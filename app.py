@@ -118,7 +118,10 @@ def _find_material_match(conn, message):
 
 
 def _inventory_rows_for_request(conn, message):
-    """Return only the inventory rows named or implied by the request."""
+    """Return the inventory rows named or implied by the request, or None
+    if the request doesn't actually name a material, color, or category —
+    callers use None to mean "this wasn't really an inventory question"
+    rather than falling back to dumping the whole inventory."""
     q = message.lower()
     category = None
     name_contains = None
@@ -161,7 +164,7 @@ def _inventory_rows_for_request(conn, message):
 
     if name_contains or color or category:
         return inventory.find_materials(conn, category=category, color=color, name_contains=name_contains)
-    return rows
+    return None
 
 
 def _format_inventory_rows(rows, conn):
@@ -196,17 +199,29 @@ def _direct_data_reply(conn, message):
     if re.search(r"(which order should i prioritize|which order should i prioritise|prioritize order|prioritise order)", q):
         return planning.which_order_first(conn)
 
-    if re.search(r"(list materials|show materials|what materials do i have|how much|what is the stock|stock of|available|qty|quantity|do i have|inventory of|reserves?)", q):
-        return _format_inventory_rows(_inventory_rows_for_request(conn, q), conn)
+    # "reserve"/"allocate" name an *action* (agent.tools.allocate_material),
+    # never a read-only lookup — deliberately excluded below so those
+    # requests reach the AI agent instead of silently returning current
+    # stock as if something had been reserved.
+    stock_question = r"(how much|what is the stock|stock of|available|qty|quantity|do i have|inventory of)"
+
+    if re.search(r"(list materials|show materials|what materials do i have)", q):
+        rows = _inventory_rows_for_request(conn, q)
+        return _format_inventory_rows(rows if rows is not None else inventory.list_materials(conn), conn)
+
+    if re.search(stock_question, q):
+        rows = _inventory_rows_for_request(conn, q)
+        if rows is not None:
+            return _format_inventory_rows(rows, conn)
 
     material = _find_material_match(conn, q)
-    if material is not None and re.search(r"(how much|what is the stock|stock of|available|qty|quantity|do i have|inventory of|reserves?)", q):
+    if material is not None and re.search(stock_question, q):
         summary = inventory.material_summary(conn, material["id"])
         if not summary:
             return f"I couldn't find a stock summary for {material['name']}."
         return summary
 
-    if order_match and re.search(r"(how much|what is the stock|stock of|available|qty|quantity|do i have)", q):
+    if order_match and re.search(stock_question, q):
         return planning.fabric_check(conn, order_match.group(0).upper())
 
     return None

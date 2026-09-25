@@ -180,7 +180,7 @@ class GeminiClient:
             tools=_tool_declarations_from_specs(),
         )
 
-    def generate(self, messages, conn=None):
+    def generate(self, messages, conn=None, max_tool_rounds=8):
         contents = []
         for msg in messages:
             role = msg.get("role", "user")
@@ -197,47 +197,47 @@ class GeminiClient:
                 "parts": [{"text": str(text)}],
             })
 
-        response = self.model.generate_content(contents)
-        calls = _extract_function_calls(response)
-        if not calls:
-            return extract_text_from_response(response)
+        for _ in range(max_tool_rounds):
+            response = self.model.generate_content(contents)
+            calls = _extract_function_calls(response)
+            if not calls:
+                return extract_text_from_response(response)
 
-        if conn is None:
-            return "The model requested a tool call, but no database connection was provided."
+            if conn is None:
+                return "The model requested a tool call, but no database connection was provided."
 
-        tool_results = []
-        for call in calls:
-            name = call["name"]
-            args = call.get("args") or {}
-            result = tools.dispatch(conn, name, args)
-            tool_results.append({"name": name, "result": result})
+            tool_results = []
+            for call in calls:
+                name = call["name"]
+                args = call.get("args") or {}
+                result = tools.dispatch(conn, name, args)
+                tool_results.append({"name": name, "result": result})
 
-        function_response_parts = []
-        for item in tool_results:
-            function_response_parts.append({
-                "function_response": {
-                    "name": item["name"],
-                    "response": {"result": item["result"]},
-                }
-            })
+            function_response_parts = []
+            for item in tool_results:
+                function_response_parts.append({
+                    "function_response": {
+                        "name": item["name"],
+                        "response": {"result": item["result"]},
+                    }
+                })
 
-        # Reuse Gemini's original model content instead of rebuilding the
-        # function_call parts. The original parts contain thought_signature,
-        # which Gemini requires on the follow-up request.
-        model_content = None
-        candidates = getattr(response, "candidates", None) or []
-        if candidates:
-            model_content = getattr(candidates[0], "content", None)
-        if model_content is None:
-            return "The model returned a tool call without reusable response content."
+            # Reuse Gemini's original model content instead of rebuilding the
+            # function_call parts. The original parts contain thought_signature,
+            # which Gemini requires on the follow-up request.
+            model_content = None
+            candidates = getattr(response, "candidates", None) or []
+            if candidates:
+                model_content = getattr(candidates[0], "content", None)
+            if model_content is None:
+                return "The model returned a tool call without reusable response content."
 
-        follow_up_contents = contents + [model_content, {
-            "role": "user",
-            "parts": function_response_parts,
-        }]
+            contents = contents + [model_content, {
+                "role": "user",
+                "parts": function_response_parts,
+            }]
 
-        follow_up = self.model.generate_content(follow_up_contents)
-        return extract_text_from_response(follow_up)
+        return "(Stopped after too many tool-use rounds — something may be looping.)"
 
 
 def make_client():
