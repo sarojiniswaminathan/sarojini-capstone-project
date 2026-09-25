@@ -181,11 +181,17 @@ body {
   box-shadow: none;
 }
 
+/* Fixed (not a sidebar child) so it stays reachable and visible even while
+   the sidebar is collapsed to width 0 — otherwise there'd be no way back in.
+   Position matches where it used to sit inside the sidebar's own flow:
+   42px title bar + 4px sidebar margin + 12px inset. */
 .sidebar-toggle {
+  position: fixed;
+  top: 58px;
+  left: 16px;
+  z-index: 100;
   width: 24px;
   height: 24px;
-  margin: 12px 0 0 12px;
-  flex: 0 0 auto;
   border: none;
   background: none;
   padding: 0;
@@ -202,7 +208,7 @@ body {
 }
 
 .fabric-tree {
-  margin-top: 20px;
+  margin-top: 56px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
