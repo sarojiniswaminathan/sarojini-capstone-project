@@ -25,6 +25,14 @@ class AdjustRequest(BaseModel):
     note: str
 
 
+class NewMaterialRequest(BaseModel):
+    name: str
+    category: str
+    unit: str
+    physical_qty: float = 0.0
+    color: str | None = None
+
+
 @router.get("/inventory/glance")
 async def inventory_glance():
     conn = get_connection()
@@ -38,6 +46,22 @@ async def inventory_glance():
         )
         materials.append(summary)
     return {"materials": materials}
+
+
+@router.post("/inventory/new")
+async def inventory_new(payload: NewMaterialRequest):
+    conn = get_connection()
+    material_id = f"MAT-{uuid.uuid4().hex[:8].upper()}"
+    inventory.add_material(
+        conn,
+        material_id,
+        payload.name,
+        payload.category,
+        payload.unit,
+        physical_qty=payload.physical_qty,
+        color=payload.color or None,
+    )
+    return {"material_id": material_id}
 
 
 @router.post("/inventory/{material_id}/adjust")

@@ -277,10 +277,6 @@ body {
   flex-direction: column;
 }
 
-.tree-leaf:last-child {
-  padding-bottom: 16px;
-}
-
 .tree-leaf-label {
   height: 36px;
   display: flex;
@@ -341,6 +337,80 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.tree-add {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 16px;
+}
+
+.tree-add-toggle {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding-left: 78px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-lh);
+  color: var(--color-text-muted);
+  transition: background-color 100ms ease, color 100ms ease;
+}
+
+.tree-add-toggle:hover {
+  background: var(--color-hover-fill);
+  color: var(--color-text-primary);
+}
+
+.tree-add-toggle svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.tree-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 8px 0 78px;
+}
+
+.tree-add-form input[type="text"],
+.tree-add-form input[type="number"] {
+  font-family: var(--font-family);
+  font-size: 0.8rem;
+  padding: 6px 8px;
+  border: 1px solid var(--color-select-border);
+  border-radius: var(--radius-select);
+}
+
+.tree-add-photo-label {
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--accent);
+  width: fit-content;
+}
+
+.tree-add-photo-name {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+.tree-add-form button[type="submit"] {
+  align-self: flex-start;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  border: none;
+  border-radius: var(--radius-select);
+  background: var(--color-selected-fill);
+  color: var(--color-text-on-dark);
   cursor: pointer;
 }
 

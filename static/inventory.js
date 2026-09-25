@@ -2,6 +2,9 @@
   const tree = document.getElementById('fabric-tree');
   const categoryTemplate = document.getElementById('tree-category-template');
   const materialTemplate = document.getElementById('tree-material-template');
+  const addTemplate = document.getElementById('tree-add-template');
+
+  const openCategories = new Set();
 
   function titleCase(word) {
     return (word || 'Other').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -82,6 +85,60 @@
     return node;
   }
 
+  function renderAddRow(categoryKey) {
+    const node = addTemplate.content.cloneNode(true);
+    const toggleBtn = node.querySelector('.tree-add-toggle');
+    const form = node.querySelector('.tree-add-form');
+    const nameInput = form.querySelector('.tree-add-name');
+    const colorInput = form.querySelector('.tree-add-color');
+    const qtyInput = form.querySelector('.tree-add-qty');
+    const unitInput = form.querySelector('.tree-add-unit');
+    const photoInput = form.querySelector('.tree-add-photo');
+    const photoNameLabel = form.querySelector('.tree-add-photo-name');
+
+    toggleBtn.addEventListener('click', () => {
+      form.hidden = !form.hidden;
+    });
+
+    photoInput.addEventListener('change', () => {
+      photoNameLabel.textContent = photoInput.files.length ? photoInput.files[0].name : '';
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const name = nameInput.value.trim();
+      const unit = unitInput.value.trim();
+      if (!name || !unit) return;
+
+      const res = await fetch('/inventory/new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          category: categoryKey,
+          unit,
+          physical_qty: parseFloat(qtyInput.value) || 0,
+          color: colorInput.value.trim() || null,
+        }),
+      });
+      const created = await res.json();
+
+      if (photoInput.files.length) {
+        const formData = new FormData();
+        formData.append('file', photoInput.files[0]);
+        await fetch(`/inventory/${encodeURIComponent(created.material_id)}/photo`, {
+          method: 'POST',
+          body: formData,
+        });
+      }
+
+      openCategories.add(categoryKey);
+      loadInventory();
+    });
+
+    return node;
+  }
+
   function renderCategory(name, materials) {
     const node = categoryTemplate.content.cloneNode(true);
     const header = node.querySelector('.tree-category-header');
@@ -89,13 +146,25 @@
     const children = node.querySelector('.tree-children');
 
     node.querySelector('.tree-category-name').textContent = titleCase(name);
-    header.setAttribute('aria-expanded', 'false');
+    const isOpen = openCategories.has(name);
+    header.setAttribute('aria-expanded', String(isOpen));
+    if (isOpen) {
+      children.classList.add('open');
+      chevron.classList.add('open');
+    }
+
     materials.forEach((material) => children.appendChild(renderMaterial(material)));
+    children.appendChild(renderAddRow(name));
 
     header.addEventListener('click', () => {
-      const isOpen = children.classList.toggle('open');
-      chevron.classList.toggle('open', isOpen);
-      header.setAttribute('aria-expanded', String(isOpen));
+      const nowOpen = children.classList.toggle('open');
+      chevron.classList.toggle('open', nowOpen);
+      header.setAttribute('aria-expanded', String(nowOpen));
+      if (nowOpen) {
+        openCategories.add(name);
+      } else {
+        openCategories.delete(name);
+      }
     });
 
     return node;

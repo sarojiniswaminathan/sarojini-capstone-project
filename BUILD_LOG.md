@@ -90,3 +90,91 @@
 - The original "best-effort mirror" design was a reasonable reading of "connect to Google Calendar" in isolation, but wrong for what was actually wanted — worth flagging that this was a real rework, not a small tweak, and it's the second time this calendar feature has needed correction based on direct feedback rather than my own assumption.
 - Test isolation gap caught during this pass: patching `google_calendar.is_connected` alone would NOT have stopped `create_event`/`list_events` from issuing real requests against a developer's actual Google Calendar if they had already completed the OAuth flow locally (those call `_service()` directly, bypassing `is_connected()`). Fixed by pointing `TOKEN_PATH` at a nonexistent file for the whole test module instead, which forces "not connected" unconditionally regardless of any real local token.
 - Still unverified end-to-end: the actual OAuth consent → callback → token exchange against Google's live API (this environment has real client credentials but no completed consent flow / token.json).
+
+---
+
+## [2026-09-22] - Deployment config, editor environment, and the start of the OAuth investigation
+
+### 1. Key Metrics
+- **Date:** September 22, 2026
+- **Time Spent (estimated):** ~1.5 hours — git commits span only 16:40–17:30 (50 min), but that excludes the redirect/deployment discussion, two API-key swaps, and the OAuth troubleshooting that continued after the last commit
+- **Approx Tokens Used (estimated):** ~80,000 tokens — dominated by one background research subagent ("explain the email-to-schedule intake flow") that reported exactly 62,514 tokens on completion, plus roughly a dozen file reads/edits and Q&A exchanges for the rest
+- **Commits:** `1bd56fa`, `3e1ba9c`, `c114769`
+
+### 2. What Shipped
+- **Deployment redirect clarified:** With the app deployed at `https://sarojini-capstone-project-production.up.railway.app/`, established that `GOOGLE_REDIRECT_URI` must match an *Authorized redirect URI* registered on the OAuth client in Google Cloud Console, and that Railway reads its own environment variables — it never sees the local `.env`. Local dev keeps `http://127.0.0.1:8000/`; both URIs can be registered on the same client.
+- **API key rotation:** Replaced the `GEMINI_API_KEY` value in `.env`. Verified by grep that the key is read via `os.environ.get("GEMINI_API_KEY")` at every call site (`agent/agent.py`, `agent/email_intake.py`, `app.py`, `agent/cli.py`) and is never hardcoded, so a single `.env` edit is sufficient locally.
+- **Insecure-transport allowance for local OAuth (`agent/google_auth.py`):** `oauthlib` refuses to exchange an authorization code over plain `http`, which silently breaks the local (non-HTTPS) redirect. `OAUTHLIB_INSECURE_TRANSPORT` is now set automatically when, and only when, `GOOGLE_REDIRECT_URI` begins with `http://`.
+- **Editor environment fix (`.vscode/settings.json`):** Pylance reported `Import "fastapi" could not be resolved` and similar for `pytest`. The packages were present in `.venv` all along; the editor was pointed at the system interpreter. Added `python.defaultInterpreterPath` pointing at `.venv/bin/python`. No application code was involved.
+- **Temporary diagnostic instrumentation:** `exchange_code()` was made to write the caught exception and traceback to `oauth_debug.log` so the real OAuth error could be seen at all (removed again the next day once the root cause was found).
+
+### 3. Honest Review: What Broke & How Fixed
+- **A failure that was indistinguishable from success:** `POST /email/check-now` returned `{"status":"checked","pending":0}` and the Google consent screen completed without any visible error, yet `token.json` was never created and no email was ever processed. The cause of the invisibility (not yet the cause of the failure itself) was located this session: `exchange_code()` in `agent/google_auth.py` caught *every* exception and returned `False`, and the root route in `app.py` discarded that return value before redirecting. A failed token exchange therefore produced exactly the same user-visible outcome as a successful one.
+- **Diagnosis discipline:** rather than continuing to guess at causes (scope mismatch, reused code, redirect mismatch were all considered), instrumentation was added to capture the actual exception. That decision is what produced the answer on 09-23.
+
+### 4. Current Limitation and Next Step
+- Google Calendar/Gmail access remained non-functional at the end of this session: `token.json` still did not exist, so `email_intake.poll_and_process()` continued to no-op at its `is_connected()` guard.
+- Next step: read `oauth_debug.log` after one more consent attempt and fix whatever the real exchange error turns out to be.
+
+---
+
+## [2026-09-23] - PKCE fix, email intake working end-to-end, and four silent-failure bugs
+
+### 1. Key Metrics
+- **Date:** September 23, 2026
+- **Time Spent (estimated):** ~3.5 hours — the longest session of the week. Commits span only 16:48–17:27 (39 min), but that captures none of the live debugging before and after: repeated OAuth retries, a `sample`/stack-trace investigation into what turned out to be a slow cold start rather than a hang, several full server restarts each costing 1–3 minutes of cold-start wait, live Gemini API-key testing, and the calendar/email verification loop afterward
+- **Approx Tokens Used (estimated):** ~85,000 tokens — a high volume of tool calls (process inspection, `pip`/import probing, verbose import tracing, repeated curl/DB checks), several with long tracebacks or stack-sample output, plus explanatory responses at each bug found
+- **Commits:** `644ba91`, `587b2b5`, `fc1af69`, `ea6755a`
+
+### 2. What Shipped
+- **PKCE support in the OAuth flow (`agent/google_auth.py`) — the fix that finally produced `token.json`:** the authorization URL now carries a `code_challenge`/`code_challenge_method=S256` derived from a generated verifier, and the same verifier is replayed on the token exchange. Google mandates PKCE for this OAuth client type; the previous code sent neither value. After this change the consent flow completed, `token.json` was written, and `/auth/google/status` reported `{"connected": true}` for the first time.
+- **Email intake verified end-to-end:** with a working AI key in place, `poll_and_process()` classified 40 inbox messages and created the first email-sourced order (`ORD-EMAIL-4EF2D6` — customer, garment, and deadline extracted from a plain-language email with no fixed format), then issued a real Google Calendar confirmation invite as the human-in-the-loop approval step.
+- **Calendar page redesign, first pass:** sidebar fabric tree rendered from live `/inventory/glance` data (required adding `category` to `material_summary()` in `agent/inventory.py` so the tree can group by it), plus a custom calendar toolbar — prev/next, month and year dropdowns, Month/Week toggle — replacing FullCalendar's default header.
+- **`to_rfc3339()` fix (`agent/google_calendar.py`):** date-only values now get a time component.
+- **Date-anchored extraction prompt (`agent/email_intake.py`):** the classifier is told today's date and instructed to resolve a bare month/day to the nearest future occurrence.
+- **`watchfiles` added to `requirements.txt`.**
+
+### 3. Honest Review: What Broke & How Fixed
+- **OAuth: `invalid_grant — Missing code verifier`.** The instrumentation added on 09-22 produced the actual error immediately. Google required PKCE; the app never sent it. Every consent attempt across two days had been failing at the final token-exchange step while presenting a completely clean consent screen. Fixed as described above, and the debug logging was removed.
+- **AI classification was failing on every single email.** `GEMINI_API_KEY` held a key that Google was actively blocking for this API (`API_KEY_SERVICE_BLOCKED` / `PERMISSION_DENIED` on `generativelanguage.googleapis.com`) — it was an API-restricted key, not a general Gemini key. Because `poll_and_process()` wraps each message in `except Exception: continue`, all 20 candidate messages failed and were skipped without ever being marked processed, so the endpoint kept reporting `"checked", pending 0`. Replaced with a working key. Worth recording that the two `GEMINI_API_KEY*` variables had been mentally labelled "CalendarAPI" and "GmailAPI" in `.env`, but the code uses them for exactly one thing — Gemini email classification. Calendar and Gmail *access* is OAuth, entirely separate.
+- **Every Google Calendar event was invisible in the app's own calendar.** `to_rfc3339("2026-09-23")` returned `"2026-09-23Z"` — a date with a timezone marker but no time — which the Calendar API rejects with HTTP 400. `list_events()` catches `HttpError` and returns `[]`, so `/calendar/events` had been quietly returning local order deadlines only, for every date range, since the feature was built. Confirmed by reproducing the 400 directly against the API before and after the fix.
+- **The dev server appeared to hang completely** — `/health` itself timed out, repeatedly, for minutes. Cause: `uvicorn --reload` had fallen back to `StatReload` (because `watchfiles` was not installed), which polls file timestamps across the entire project tree — including `.venv`'s ~17,000 files. Installing `watchfiles` switched it to event-based watching.
+- **Genuinely slow cold start, misdiagnosed twice as a deadlock.** Importing `anthropic` and `google-generativeai` walks thousands of small module files, and this project lives inside an iCloud-synced Desktop folder, so per-file overhead is high; a fresh start takes roughly 30–90 seconds. Two separate "the process is hung" conclusions during this session were wrong — a `sample` stack trace showed the process sitting in a normal `kevent` event-loop wait, i.e. already serving. The lesson recorded here: a 10-second timeout is not evidence of a deadlock in this environment.
+- **Black "busy day" cells made the real calendar unreadable and were reverted.** The reference mockup shows two solid dark cells in an otherwise empty month; filling a cell for *any* event turned a real week of college classes, order deadlines, and flights into dark-on-dark text. Removed the same day it shipped.
+- **Deadline extracted with the wrong year:** "Oct 10th" became `2024-10-10`. The prompt gave the model no reference date. Fixed by injecting today's date plus an explicit nearest-future-occurrence rule; the existing order's deadline was corrected to `2026-10-10`.
+- **The common thread:** four of these — the OAuth exchange, the blocked AI key, the calendar 400, and the original email no-op — were all the same failure shape. A broad `except` swallowed a real error, and the resulting silence was indistinguishable from "there was nothing to do." Fail-soft is the right design for an unattended poll loop, but without a log line it makes debugging nearly impossible from the outside.
+
+### 4. Current Limitation and Next Step
+- `ORD-EMAIL-4EF2D6` is still `pending`: the Google Calendar confirmation invite has been created and delivered, but the RSVP has not been answered, so the accept → `confirmed` half of `check_pending_confirmations()` remains unverified end-to-end.
+- The app does not auto-confirm from the text of an owner's email reply; approval is deliberately routed through the calendar invite. This surprised the owner during testing and is worth stating plainly in the README.
+- Intake is polling-based at `EMAIL_POLL_INTERVAL_SECONDS` (default 180s), with `POST /email/check-now` as the manual trigger. No Gmail push notifications.
+- The fail-soft `except` blocks should log the swallowed exception rather than discarding it.
+
+---
+
+## [2026-09-24] - Design-token rebuild of the calendar page
+
+### 1. Key Metrics
+- **Date:** September 24, 2026
+- **Time Spent (estimated):** ~1.25 hours — a single focused pass with no server restarts required (no Python files changed), a design-scope clarification exchange, then a full rewrite of `style.css`/`index.html`/`inventory.js` plus a new `layout.js`
+- **Approx Tokens Used (estimated):** ~35,000 tokens — the largest share is the design spec itself (received twice, duplicated) and the full-file rewrites of `static/style.css` (the biggest single file in the change) and `templates/index.html`, plus verification curl calls
+- **Commit:** `edd0ad3`
+
+### 2. What Shipped
+- **A single token set (`static/style.css`)** — typography (Inter 400/500/600 with the specified scale, letter-spacing, and tabular-nums day numbers), colors, the 4px-base spacing values, radii, and the two shadow definitions — declared once as CSS custom properties and referenced everywhere, replacing the previous ad-hoc values.
+- **Title bar (`templates/index.html`):** a single 42px full-width surface with decorative, `aria-hidden` traffic lights and the application title, with the Google-connection status and pending-order badge folded into it so no existing function was lost.
+- **Sidebar:** 250px, right-cast shadow only, 47px category rows with the specified chevron/label indents and 8px-inset dividers, an animated accordion, and a working collapse toggle (`static/layout.js`) with an `aria-expanded` state and a ⌘B / Ctrl+B shortcut.
+- **Leaf items restructured to match the reference layout:** label above a 93 × 93 swatch rather than beside it. Materials with no colour (`Boning`, `Zip`) render as plain 36px label rows.
+- **Calendar card:** specified outer margins, inner padding, 30px header row, 28px selects with a custom chevron, caption-styled weekday row, day numbers positioned per spec, no "today" highlight, and a 100ms hover fill.
+- **Accessibility and motion:** `:focus-visible` rings on interactive elements, `prefers-reduced-motion` honoured, and the ≥1280 / 768–1280 / <768 responsive tiers.
+
+### 3. Honest Review: What Broke & How Fixed
+- **Two scope decisions were referred back to the owner rather than assumed**, because both were larger than a restyle. First, the reference is in substance a *date-range picker* — its two dark cells are a range start and end, with a lighter fill between — whereas this application's calendar displays real orders, deadlines, and Google events. Matching it literally would have replaced a working feature with a different one. Second, the accompanying specification called for React, TypeScript, Tailwind, shadcn/ui, and Playwright "if there isn't an existing stack"; there is one (FastAPI, Jinja2, vanilla JS, FullCalendar), so adopting that toolchain would have meant introducing Node to a Python repository and discarding the working Google Calendar integration. The owner chose to keep the existing stack and the existing event calendar.
+- **Drag-and-drop was deliberately not implemented.** The specification asks for inventory items to be draggable onto calendar cells, but with the range-picker semantics declined there is no defined behaviour for a drop, and no backend operation it would correspond to. A `cursor: grab` style that had been added reflexively was removed, since it advertises an interaction that does not exist.
+- **Verification was done by inspection and live endpoint checks, not by automated screenshot comparison.** The specification asks for a Playwright screenshot diff at 1372 × 891; Playwright requires Node, which this repository does not have and which the owner chose not to add. Pixel-level conformance is therefore claimed only as "matched by eye against the reference," which is weaker evidence and is recorded as such.
+- **Content was taken from the repository, not the mockup.** The tree renders the real seven materials under their real categories (`fabric`, `construction`, `fastening`); the mockup's `Cotton → Blue / Orange` three-level nesting was not reproduced, because the real data has no material carrying multiple colour variants and inventing that level would have misrepresented the inventory. The window title likewise remains the application's own name rather than the mockup's.
+
+### 4. Current Limitation and Next Step
+- No automated visual regression test exists for the page; any future CSS change can silently break the layout.
+- The sidebar's `<768px` overlay drawer opens by default on first load at that width rather than starting closed, which is a minor deviation on the least-used breakpoint.
+- Next step: confirm the rendered page against the reference in a browser and correct any remaining spacing or colour differences.

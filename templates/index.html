@@ -117,6 +117,26 @@
       </div>
     </template>
 
+    <template id="tree-add-template">
+      <div class="tree-add">
+        <button type="button" class="tree-add-toggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          <span>Add new item</span>
+        </button>
+        <form class="tree-add-form" hidden>
+          <input type="text" class="tree-add-name" placeholder="Item name" required />
+          <input type="text" class="tree-add-color" placeholder="Color (optional)" />
+          <input type="number" step="any" min="0" class="tree-add-qty" placeholder="Quantity" />
+          <input type="text" class="tree-add-unit" placeholder="Unit (m, pieces, spool…)" required />
+          <label class="tree-add-photo-label">
+            📷 Add photo<input type="file" accept="image/*" class="tree-add-photo" hidden />
+          </label>
+          <span class="tree-add-photo-name"></span>
+          <button type="submit">Add</button>
+        </form>
+      </div>
+    </template>
+
     <script src="/static/chat.js"></script>
     <script src="/static/inventory.js"></script>
     <script src="/static/calendar.js"></script>
